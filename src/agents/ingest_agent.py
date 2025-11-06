@@ -33,6 +33,7 @@ class DataIngestionError(Exception):
     pass
 
 
+
 class DataIngestionAgent:
     """Agent responsible for ingesting financial data into the data lake."""
 
@@ -84,13 +85,19 @@ class DataIngestionAgent:
     def _initialize_spark(self) -> SparkSession:
         """Initialize Spark session with Delta Lake support."""
         try:
-            spark = (SparkSession.builder
-                        .appName("FinanceDataIngestion")
-                        .config("spark.sql.extensions", 
-                               "io.delta.sql.DeltaSparkSessionExtension")
-                        .config("spark.sql.catalog.spark_catalog",
-                               "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-                        .getOrCreate())
+            spark = (
+                SparkSession.builder
+                .appName("FinanceDataIngestion")
+                .config(
+                    "spark.sql.extensions",
+                    "io.delta.sql.DeltaSparkSessionExtension"
+                )
+                .config(
+                    "spark.sql.catalog.spark_catalog",
+                    "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+                )
+                .getOrCreate()
+            )
             
             logger.info("SparkSession initialized successfully")
             return spark
@@ -159,8 +166,8 @@ class DataIngestionAgent:
                     logger.info(f"Successfully downloaded {len(hist)} rows for {ticker}")
                     self.ingestion_stats["successful_tickers"].append(ticker)
                     
-                except Exception as e:
-                    logger.error(f"Failed to download data for {ticker}", exc_info=True)
+                except Exception as exc:
+                    logger.error(f"Failed to download data for {ticker}: {str(exc)}", exc_info=True)
                     self.ingestion_stats["failed_tickers"].append(ticker)
                     continue
 
@@ -187,9 +194,9 @@ class DataIngestionAgent:
             
             return combined_data
 
-        except Exception as e:
+        except Exception as exc:
             logger.error("Data download failed", exc_info=True)
-            raise DataIngestionError(f"Data download failed: {str(e)}")
+            raise DataIngestionError(f"Data download failed: {str(exc)}")
         finally:
             self.ingestion_stats["end_time"] = datetime.now()
             self._log_ingestion_summary()
@@ -251,9 +258,11 @@ def main():
 
         logger.info("Data ingestion workflow completed successfully")
 
-    except Exception as e:
-        logger.critical("Data ingestion workflow failed", exc_info=True)
+    except Exception as exc:
+        logger.critical(f"Data ingestion workflow failed: {str(exc)}", exc_info=True)
         sys.exit(1)
+
+
 
 if __name__ == "__main__":
     main()

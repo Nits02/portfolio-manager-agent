@@ -10,6 +10,7 @@ from pyspark.sql.types import StructType, StringType, DateType, DoubleType, Long
 
 from src.agents.ingest_agent import DataIngestionAgent, DataIngestionError
 
+
 @pytest.fixture
 def sample_price_data():
     """Create a sample price DataFrame that mimics yfinance output."""
@@ -37,7 +38,8 @@ def mock_spark_session():
 def ingest_agent(mock_spark_session):
     """Create a DataIngestionAgent instance with mocked SparkSession."""
     with patch('src.agents.ingest_agent.SparkSession') as mock_session:
-        mock_session.builder.appName.return_value.config.return_value.config.return_value.getOrCreate.return_value = mock_spark_session
+        (mock_session.builder.appName.return_value.config.return_value
+         .config.return_value.getOrCreate.return_value) = mock_spark_session
         agent = DataIngestionAgent()
         agent.spark = mock_spark_session
         return agent

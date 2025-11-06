@@ -13,11 +13,11 @@ def create_directory_with_placeholders(path: str, readme_content: str = None) ->
     """Create a directory with .keep file and README.md"""
     # Create directory if it doesn't exist
     pathlib.Path(path).mkdir(parents=True, exist_ok=True)
-    
+
     # Create .keep file
     keep_file = os.path.join(path, '.keep')
     pathlib.Path(keep_file).touch()
-    
+
     # Create README.md with content
     if readme_content is None:
         readme_content = f"# {os.path.basename(path)}\n\nAdd documentation for this directory here."
@@ -38,7 +38,6 @@ def setup_project_structure():
         'docs': 'Project documentation and guides.',
         'infra': 'Infrastructure and deployment configuration.'
     }
-    
     # Get the project root directory (where this script is located)
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
