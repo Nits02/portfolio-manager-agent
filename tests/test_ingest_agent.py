@@ -181,5 +181,6 @@ class TestDataIngestionAgent:
             assert call_kwargs['start'] == start_date
             assert call_kwargs['end'] == end_date
 
+
 if __name__ == '__main__':
     pytest.main([__file__])
