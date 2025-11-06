@@ -4,9 +4,9 @@ import pytest
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, StringType, DateType, DoubleType, LongType
+from pyspark.sql.types import StructType, StringType, DateType, DoubleType, LongType
 
 from src.agents.ingest_agent import DataIngestionAgent, DataIngestionError
 
@@ -23,6 +23,7 @@ def sample_price_data():
         'Volume': np.random.randint(1000000, 5000000, len(dates))
     }
     return pd.DataFrame(data, index=dates)
+
 
 @pytest.fixture
 def mock_spark_session():
@@ -93,7 +94,8 @@ class TestDataIngestionAgent:
         assert len(result) == len(sample_price_data)
 
     @patch('yfinance.Ticker')
-    def test_download_price_data_multiple_tickers(self, mock_yf_ticker, ingest_agent, sample_price_data):
+    def test_download_price_data_multiple_tickers(
+            self, mock_yf_ticker, ingest_agent, sample_price_data):
         """Test price data download for multiple tickers."""
         # Create separate mock instances for each ticker
         ticker_instances = {}

@@ -9,7 +9,6 @@ This module provides a DataIngestionAgent class that:
 
 import logging
 import sys
-import traceback
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 
@@ -33,6 +32,7 @@ class DataIngestionError(Exception):
     """Custom exception for data ingestion errors."""
     pass
 
+
 class DataIngestionAgent:
     """Agent responsible for ingesting financial data into the data lake."""
 
@@ -40,7 +40,7 @@ class DataIngestionAgent:
     def define_schema() -> StructType:
         """
         Define the schema for financial data that matches yfinance output.
-        
+
         Returns:
             StructType: Spark schema for financial data
         """
@@ -77,18 +77,20 @@ class DataIngestionAgent:
         try:
             self.spark = self._initialize_spark()
             logger.info(f"Initialized DataIngestionAgent with catalog={catalog}, database={database}")
-        except Exception as e:
-            logger.critical(f"Failed to initialize DataIngestionAgent: {str(e)}", exc_info=True)
-            raise DataIngestionError(f"Agent initialization failed: {str(e)}")
+        except Exception as exc:
+            logger.critical(f"Failed to initialize DataIngestionAgent: {str(exc)}", exc_info=True)
+            raise DataIngestionError(f"Agent initialization failed: {str(exc)}")
         
     def _initialize_spark(self) -> SparkSession:
         """Initialize Spark session with Delta Lake support."""
         try:
             spark = (SparkSession.builder
-                    .appName("FinanceDataIngestion")
-                    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-                    .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-                    .getOrCreate())
+                        .appName("FinanceDataIngestion")
+                        .config("spark.sql.extensions", 
+                               "io.delta.sql.DeltaSparkSessionExtension")
+                        .config("spark.sql.catalog.spark_catalog",
+                               "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+                        .getOrCreate())
             
             logger.info("SparkSession initialized successfully")
             return spark
