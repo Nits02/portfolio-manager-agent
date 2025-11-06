@@ -34,6 +34,7 @@ def mock_spark_session():
     spark.sql = Mock()
     return spark
 
+
 @pytest.fixture
 def ingest_agent(mock_spark_session):
     """Create a DataIngestionAgent instance with mocked SparkSession."""
@@ -97,7 +98,11 @@ class TestDataIngestionAgent:
 
     @patch('yfinance.Ticker')
     def test_download_price_data_multiple_tickers(
-            self, mock_yf_ticker, ingest_agent, sample_price_data):
+            self,
+            mock_yf_ticker,
+            ingest_agent,
+            sample_price_data
+    ):
         """Test price data download for multiple tickers."""
         # Create separate mock instances for each ticker
         ticker_instances = {}

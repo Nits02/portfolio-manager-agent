@@ -33,7 +33,6 @@ class DataIngestionError(Exception):
     pass
 
 
-
 class DataIngestionAgent:
     """Agent responsible for ingesting financial data into the data lake."""
 
@@ -77,9 +76,10 @@ class DataIngestionAgent:
         }
         try:
             self.spark = self._initialize_spark()
-            logger.info(f"Initialized DataIngestionAgent with catalog={catalog}, database={database}")
+            logger.info(
+                f"Initialized DataIngestionAgent with catalog={catalog}, database={database}")
         except Exception as exc:
-            logger.critical(f"Failed to initialize DataIngestionAgent: {str(exc)}", exc_info=True)
+            logger.critical("Failed to initialize DataIngestionAgent", exc_info=True)
             raise DataIngestionError(f"Agent initialization failed: {str(exc)}")
         
     def _initialize_spark(self) -> SparkSession:
@@ -114,7 +114,8 @@ class DataIngestionAgent:
             logger.info(f"Total rows ingested: {self.ingestion_stats['total_rows']}")
             logger.info(f"Successful tickers: {', '.join(self.ingestion_stats['successful_tickers'])}")
             if self.ingestion_stats['failed_tickers']:
-                logger.warning(f"Failed tickers: {', '.join(self.ingestion_stats['failed_tickers'])}")
+                failed = ', '.join(self.ingestion_stats['failed_tickers'])
+                logger.warning(f"Failed tickers: {failed}")
             logger.info("=====================")
 
     def download_price_data(self, tickers: List[str], start_date: Optional[datetime] = None,
@@ -215,8 +216,6 @@ class DataIngestionAgent:
         start_time = datetime.now()
         try:
             logger.info(f"Starting Delta table ingestion for {table_name}")
-            
-            # Convert pandas DataFrame to Spark DataFrame with defined schema
             logger.debug("Converting to Spark DataFrame with schema validation...")
             spark_df = self.spark.createDataFrame(data, schema=self.define_schema())
             
