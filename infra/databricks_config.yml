@@ -1,0 +1,45 @@
+# Databricks deployment configuration for portfolio manager pipeline
+
+# Environment-specific configurations
+environments:
+  dev:
+    databricks_host: "https://your-dev-workspace.cloud.databricks.com"
+    catalog: "main"
+    schema: "finance_dev"
+    cluster_policy_id: "your-dev-cluster-policy-id"
+    
+  staging:
+    databricks_host: "https://your-staging-workspace.cloud.databricks.com"
+    catalog: "main"
+    schema: "finance_staging"
+    cluster_policy_id: "your-staging-cluster-policy-id"
+    
+  prod:
+    databricks_host: "https://your-prod-workspace.cloud.databricks.com"
+    catalog: "main"
+    schema: "finance"
+    cluster_policy_id: "your-prod-cluster-policy-id"
+
+# Default job configurations
+default_job_settings:
+  timeout_seconds: 3600
+  max_retries: 2
+  min_retry_interval_millis: 300000
+  email_notifications:
+    on_failure: ["your-email@company.com"]
+    no_alert_for_skipped_runs: true
+
+# Pipeline schedule configurations
+schedules:
+  data_ingestion: "0 0 6 * * ?"  # 6 AM UTC daily
+  feature_engineering: "0 0 7 * * ?"  # 7 AM UTC daily
+  data_validation: "0 30 7 * * ?"  # 7:30 AM UTC daily
+
+# Default tickers for production runs
+default_tickers: ["AAPL", "MSFT", "GOOGL", "AMZN", "META"]
+
+# Data quality thresholds
+validation_thresholds:
+  max_null_percentage: 5.0
+  max_outlier_percentage: 1.0
+  min_data_completeness: 95.0

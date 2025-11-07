@@ -1,0 +1,37 @@
+{
+  "name": "Feature Validation Pipeline",
+  "tasks": [
+    {
+      "task_key": "validate_features",
+      "notebook_task": {
+        "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/02_validate_features",
+        "source": "WORKSPACE",
+        "base_parameters": {
+          "tickers": "${TICKERS}",
+          "catalog": "main",
+          "schema": "finance"
+        }
+      },
+      "existing_cluster_policy": {
+        "policy_id": "${CLUSTER_POLICY_ID}"
+      },
+      "timeout_seconds": 1800,
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "min_retry_interval_millis": 60000
+    }
+  ],
+  "format": "MULTI_TASK",
+  "max_concurrent_runs": 1,
+  "tags": {
+    "purpose": "feature_validation",
+    "pipeline": "portfolio_manager"
+  },
+  "email_notifications": {
+    "on_failure": [],
+    "no_alert_for_skipped_runs": true
+  },
+  "run_as": {
+    "user_name": "niteshchand_sharma@epam.com"
+  }
+}

@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  portfolio-manager:
+    build: .
+    environment:
+      - PYTHONPATH=/app/src
+      - DATABRICKS_HOST=${DATABRICKS_HOST}
+      - DATABRICKS_TOKEN=${DATABRICKS_TOKEN}
+    volumes:
+      - .:/app
+      - ~/.databricks:/root/.databricks:ro
+    command: >
+      bash -c "
+        echo 'Running Portfolio Manager Agent Tests...' &&
+        python -m pytest tests/ -v --tb=short &&
+        echo 'Running flake8 linting...' &&
+        flake8 src/ tests/ --max-line-length=100 --exclude=__pycache__,.git,*.pyc
+      "
+
+  feature-engineering-test:
+    build: .
+    environment:
+      - PYTHONPATH=/app/src
+    volumes:
+      - .:/app
+    command: python -m pytest tests/test_feature_engineering_agent.py -v
+
+  databricks-deploy:
+    build: .
+    environment:
+      - DATABRICKS_HOST=${DATABRICKS_HOST}
+      - DATABRICKS_TOKEN=${DATABRICKS_TOKEN}
+      - CLUSTER_POLICY_ID=${CLUSTER_POLICY_ID}
+      - ENVIRONMENT=${ENVIRONMENT:-dev}
+      - TICKERS=${TICKERS:-AAPL,MSFT}
+    volumes:
+      - .:/app
+      - ~/.databricks:/root/.databricks:ro
+    command: >
+      bash -c "
+        echo 'Deploying to Databricks...' &&
+        ./scripts/deploy_pipeline.sh --environment ${ENVIRONMENT:-dev} --tickers '${TICKERS:-AAPL,MSFT}' --action deploy
+      "
+    profiles:
+      - deploy
+
+networks:
+  default:
+    name: portfolio-manager-network

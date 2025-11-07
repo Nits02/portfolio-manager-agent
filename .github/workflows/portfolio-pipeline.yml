@@ -1,0 +1,198 @@
+name: Portfolio Manager Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging
+        - prod
+      tickers:
+        description: 'Comma-separated list of tickers'
+        required: false
+        default: 'AAPL,MSFT'
+        type: string
+      skip_ingestion:
+        description: 'Skip data ingestion step'
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    # Run daily at 6:30 AM UTC (after market close)
+    - cron: '30 6 * * *'
+
+env:
+  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      tickers: ${{ steps.config.outputs.tickers }}
+      environment: ${{ steps.config.outputs.environment }}
+      skip_ingestion: ${{ steps.config.outputs.skip_ingestion }}
+    steps:
+    - name: Configure pipeline
+      id: config
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "tickers=${{ github.event.inputs.tickers }}" >> $GITHUB_OUTPUT
+          echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          echo "skip_ingestion=${{ github.event.inputs.skip_ingestion }}" >> $GITHUB_OUTPUT
+        else
+          echo "tickers=AAPL,MSFT,GOOGL,AMZN,META" >> $GITHUB_OUTPUT
+          echo "environment=prod" >> $GITHUB_OUTPUT
+          echo "skip_ingestion=false" >> $GITHUB_OUTPUT
+        fi
+
+  data-ingestion:
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.skip_ingestion != 'true'
+    environment: ${{ needs.setup.outputs.environment }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Databricks CLI
+      run: |
+        curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+    - name: Configure Databricks CLI
+      run: |
+        databricks configure --host "${{ env.DATABRICKS_HOST }}" --token "${{ env.DATABRICKS_TOKEN }}"
+
+    - name: Run data ingestion
+      run: |
+        echo "🚀 Starting data ingestion for tickers: ${{ needs.setup.outputs.tickers }}"
+        
+        # Create ingestion job configuration
+        envsubst < infra/job_ingest.json > ingestion_config.json
+        
+        # Check if job exists and run it
+        if databricks jobs list --output json | jq -e '.jobs[] | select(.settings.name == "Data Ingestion Agent")' > /dev/null; then
+          JOB_ID=$(databricks jobs list --output json | jq -r '.jobs[] | select(.settings.name == "Data Ingestion Agent") | .job_id')
+          echo "Found existing ingestion job: $JOB_ID"
+        else
+          JOB_ID=$(databricks jobs create --json-file ingestion_config.json | jq -r '.job_id')
+          echo "Created new ingestion job: $JOB_ID"
+        fi
+        
+        # Run the job
+        RUN_ID=$(databricks jobs run-now --job-id $JOB_ID | jq -r '.run_id')
+        echo "Started ingestion run: $RUN_ID"
+        
+        # Wait for completion
+        timeout 1800 bash -c '
+          while true; do
+            STATUS=$(databricks runs get --run-id '$RUN_ID' | jq -r ".state.life_cycle_state")
+            echo "Ingestion status: $STATUS"
+            
+            if [ "$STATUS" = "TERMINATED" ]; then
+              RESULT=$(databricks runs get --run-id '$RUN_ID' | jq -r ".state.result_state")
+              if [ "$RESULT" = "SUCCESS" ]; then
+                echo "✅ Data ingestion completed successfully"
+                exit 0
+              else
+                echo "❌ Data ingestion failed"
+                exit 1
+              fi
+            elif [ "$STATUS" = "INTERNAL_ERROR" ] || [ "$STATUS" = "SKIPPED" ]; then
+              echo "❌ Data ingestion failed with status: $STATUS"
+              exit 1
+            fi
+            sleep 30
+          done
+        '
+
+  feature-engineering:
+    uses: ./.github/workflows/feature-engineering.yml
+    needs: [setup, data-ingestion]
+    if: always() && (needs.data-ingestion.result == 'success' || needs.setup.outputs.skip_ingestion == 'true')
+    with:
+      tickers: ${{ needs.setup.outputs.tickers }}
+      environment: ${{ needs.setup.outputs.environment }}
+    secrets: inherit
+
+  data-validation:
+    uses: ./.github/workflows/data-validation.yml
+    needs: [setup, feature-engineering]
+    if: needs.feature-engineering.result == 'success'
+    with:
+      tickers: ${{ needs.setup.outputs.tickers }}
+      environment: ${{ needs.setup.outputs.environment }}
+    secrets: inherit
+
+  notify-completion:
+    runs-on: ubuntu-latest
+    needs: [setup, data-ingestion, feature-engineering, data-validation]
+    if: always()
+    steps:
+    - name: Generate pipeline report
+      run: |
+        echo "# Portfolio Manager Pipeline Report" > pipeline_report.md
+        echo "" >> pipeline_report.md
+        echo "**Pipeline Run:** $(date -u)" >> pipeline_report.md
+        echo "**Environment:** ${{ needs.setup.outputs.environment }}" >> pipeline_report.md
+        echo "**Tickers:** ${{ needs.setup.outputs.tickers }}" >> pipeline_report.md
+        echo "**Trigger:** ${{ github.event_name }}" >> pipeline_report.md
+        echo "" >> pipeline_report.md
+        echo "## Job Results" >> pipeline_report.md
+        echo "" >> pipeline_report.md
+        
+        # Data Ingestion Result
+        if [ "${{ needs.setup.outputs.skip_ingestion }}" = "true" ]; then
+          echo "- 🔄 **Data Ingestion:** SKIPPED" >> pipeline_report.md
+        elif [ "${{ needs.data-ingestion.result }}" = "success" ]; then
+          echo "- ✅ **Data Ingestion:** SUCCESS" >> pipeline_report.md
+        else
+          echo "- ❌ **Data Ingestion:** FAILED" >> pipeline_report.md
+        fi
+        
+        # Feature Engineering Result
+        if [ "${{ needs.feature-engineering.result }}" = "success" ]; then
+          echo "- ✅ **Feature Engineering:** SUCCESS" >> pipeline_report.md
+        else
+          echo "- ❌ **Feature Engineering:** FAILED" >> pipeline_report.md
+        fi
+        
+        # Data Validation Result
+        if [ "${{ needs.data-validation.result }}" = "success" ]; then
+          echo "- ✅ **Data Validation:** SUCCESS" >> pipeline_report.md
+        else
+          echo "- ❌ **Data Validation:** FAILED" >> pipeline_report.md
+        fi
+        
+        echo "" >> pipeline_report.md
+        
+        # Overall Status
+        if [ "${{ needs.feature-engineering.result }}" = "success" ] && [ "${{ needs.data-validation.result }}" = "success" ]; then
+          echo "## 🎉 Pipeline Status: SUCCESS" >> pipeline_report.md
+          echo "" >> pipeline_report.md
+          echo "All pipeline stages completed successfully. Feature tables are ready for ML workflows." >> pipeline_report.md
+        else
+          echo "## ⚠️ Pipeline Status: PARTIAL SUCCESS / FAILURE" >> pipeline_report.md
+          echo "" >> pipeline_report.md
+          echo "Some pipeline stages failed. Please check individual job logs for details." >> pipeline_report.md
+        fi
+
+    - name: Upload pipeline report
+      uses: actions/upload-artifact@v4
+      with:
+        name: pipeline-report-${{ needs.setup.outputs.environment }}
+        path: pipeline_report.md
+        retention-days: 30
+
+    - name: Summary
+      run: |
+        echo "## Pipeline Summary"
+        echo "Environment: ${{ needs.setup.outputs.environment }}"
+        echo "Tickers: ${{ needs.setup.outputs.tickers }}"
+        echo "Data Ingestion: ${{ needs.data-ingestion.result || 'skipped' }}"
+        echo "Feature Engineering: ${{ needs.feature-engineering.result }}"
+        echo "Data Validation: ${{ needs.data-validation.result }}"

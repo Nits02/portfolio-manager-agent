@@ -1,0 +1,244 @@
+name: Feature Engineering Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      tickers:
+        description: 'Comma-separated list of tickers to process'
+        required: false
+        default: 'AAPL,MSFT'
+        type: string
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: string
+  workflow_dispatch:
+    inputs:
+      tickers:
+        description: 'Comma-separated list of tickers to process'
+        required: false
+        default: 'AAPL,MSFT'
+        type: string
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging
+        - prod
+  schedule:
+    # Run daily at 7 AM UTC (after market close and data ingestion)
+    - cron: '0 7 * * *'
+  workflow_run:
+    workflows: ["Data Ingestion Pipeline"]
+    types:
+      - completed
+
+env:
+  PYTHON_VERSION: "3.9"
+  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+jobs:
+  validate-inputs:
+    runs-on: ubuntu-latest
+    outputs:
+      tickers: ${{ steps.setup.outputs.tickers }}
+      environment: ${{ steps.setup.outputs.environment }}
+    steps:
+    - name: Setup inputs
+      id: setup
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "tickers=${{ github.event.inputs.tickers }}" >> $GITHUB_OUTPUT
+          echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+        else
+          echo "tickers=AAPL,MSFT,GOOGL,AMZN,META" >> $GITHUB_OUTPUT
+          echo "environment=prod" >> $GITHUB_OUTPUT
+        fi
+
+  test-feature-engineering:
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run feature engineering tests
+      run: |
+        python -m pytest tests/test_feature_engineering_agent.py -v --junitxml=feature-test-results.xml
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: feature-engineering-test-results
+        path: feature-test-results.xml
+        retention-days: 30
+
+  deploy-databricks-job:
+    runs-on: ubuntu-latest
+    needs: [validate-inputs, test-feature-engineering]
+    if: success()
+    environment: ${{ needs.validate-inputs.outputs.environment }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Databricks CLI
+      run: |
+        curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+    - name: Configure Databricks CLI
+      run: |
+        echo "${{ env.DATABRICKS_HOST }}" > ~/.databricks-host
+        echo "${{ env.DATABRICKS_TOKEN }}" > ~/.databricks-token
+        databricks configure --host "$(cat ~/.databricks-host)" --token "$(cat ~/.databricks-token)"
+
+    - name: Create or update feature engineering job
+      run: |
+        # Create job configuration with current tickers
+        envsubst < infra/job_feature_engineering.json > job_config.json
+        
+        # Deploy or update the job
+        if databricks jobs list --output json | jq -e '.jobs[] | select(.settings.name == "Feature Engineering Pipeline")' > /dev/null; then
+          JOB_ID=$(databricks jobs list --output json | jq -r '.jobs[] | select(.settings.name == "Feature Engineering Pipeline") | .job_id')
+          databricks jobs reset --job-id $JOB_ID --json-file job_config.json
+          echo "Updated existing job with ID: $JOB_ID"
+        else
+          JOB_ID=$(databricks jobs create --json-file job_config.json | jq -r '.job_id')
+          echo "Created new job with ID: $JOB_ID"
+        fi
+        echo "JOB_ID=$JOB_ID" >> $GITHUB_ENV
+      env:
+        TICKERS: ${{ needs.validate-inputs.outputs.tickers }}
+        ENVIRONMENT: ${{ needs.validate-inputs.outputs.environment }}
+        CLUSTER_POLICY_ID: ${{ secrets.CLUSTER_POLICY_ID }}
+
+    - name: Run feature engineering job
+      run: |
+        RUN_ID=$(databricks jobs run-now --job-id $JOB_ID | jq -r '.run_id')
+        echo "Started job run with ID: $RUN_ID"
+        echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+        
+        # Wait for job completion (timeout after 30 minutes)
+        timeout 1800 bash -c '
+          while true; do
+            STATUS=$(databricks runs get --run-id '$RUN_ID' | jq -r ".state.life_cycle_state")
+            echo "Job status: $STATUS"
+            
+            if [ "$STATUS" = "TERMINATED" ]; then
+              RESULT=$(databricks runs get --run-id '$RUN_ID' | jq -r ".state.result_state")
+              if [ "$RESULT" = "SUCCESS" ]; then
+                echo "Job completed successfully"
+                exit 0
+              else
+                echo "Job failed with result: $RESULT"
+                exit 1
+              fi
+            elif [ "$STATUS" = "INTERNAL_ERROR" ] || [ "$STATUS" = "SKIPPED" ]; then
+              echo "Job failed with status: $STATUS"
+              exit 1
+            fi
+            
+            sleep 30
+          done
+        '
+
+    - name: Get job output
+      if: always()
+      run: |
+        echo "=== Job Output ==="
+        databricks runs get-output --run-id $RUN_ID | jq -r '.notebook_output.result' || echo "No output available"
+
+  validate-features:
+    runs-on: ubuntu-latest
+    needs: [validate-inputs, deploy-databricks-job]
+    if: success()
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Databricks CLI
+      run: |
+        curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+    - name: Configure Databricks CLI
+      run: |
+        echo "${{ env.DATABRICKS_HOST }}" > ~/.databricks-host
+        echo "${{ env.DATABRICKS_TOKEN }}" > ~/.databricks-token
+        databricks configure --host "$(cat ~/.databricks-host)" --token "$(cat ~/.databricks-token)"
+
+    - name: Run feature validation
+      run: |
+        # Create and run validation job
+        envsubst < infra/job_validate_features.json > validation_config.json
+        
+        VALIDATION_JOB_ID=$(databricks jobs create --json-file validation_config.json | jq -r '.job_id')
+        echo "Created validation job with ID: $VALIDATION_JOB_ID"
+        
+        VALIDATION_RUN_ID=$(databricks jobs run-now --job-id $VALIDATION_JOB_ID | jq -r '.run_id')
+        echo "Started validation run with ID: $VALIDATION_RUN_ID"
+        
+        # Wait for validation completion
+        timeout 900 bash -c '
+          while true; do
+            STATUS=$(databricks runs get --run-id '$VALIDATION_RUN_ID' | jq -r ".state.life_cycle_state")
+            echo "Validation status: $STATUS"
+            
+            if [ "$STATUS" = "TERMINATED" ]; then
+              RESULT=$(databricks runs get --run-id '$VALIDATION_RUN_ID' | jq -r ".state.result_state")
+              if [ "$RESULT" = "SUCCESS" ]; then
+                echo "Validation completed successfully"
+                exit 0
+              else
+                echo "Validation failed with result: $RESULT"
+                exit 1
+              fi
+            elif [ "$STATUS" = "INTERNAL_ERROR" ] || [ "$STATUS" = "SKIPPED" ]; then
+              echo "Validation failed with status: $STATUS"
+              exit 1
+            fi
+            
+            sleep 15
+          done
+        '
+        
+        # Clean up validation job
+        databricks jobs delete --job-id $VALIDATION_JOB_ID
+      env:
+        TICKERS: ${{ needs.validate-inputs.outputs.tickers }}
+        CLUSTER_POLICY_ID: ${{ secrets.CLUSTER_POLICY_ID }}
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [validate-inputs, test-feature-engineering, deploy-databricks-job, validate-features]
+    if: always()
+    steps:
+    - name: Notify on success
+      if: needs.deploy-databricks-job.result == 'success' && needs.validate-features.result == 'success'
+      run: |
+        echo "✅ Feature Engineering Pipeline completed successfully!"
+        echo "Processed tickers: ${{ needs.validate-inputs.outputs.tickers }}"
+        echo "Environment: ${{ needs.validate-inputs.outputs.environment }}"
+
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "❌ Feature Engineering Pipeline failed!"
+        echo "Please check the logs for details."
+        echo "Failed jobs:"
+        echo "- Test: ${{ needs.test-feature-engineering.result }}"
+        echo "- Deploy: ${{ needs.deploy-databricks-job.result }}"
+        echo "- Validate: ${{ needs.validate-features.result }}"
