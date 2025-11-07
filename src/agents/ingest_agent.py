@@ -160,7 +160,8 @@ class DataIngestionAgent:
                     hist.reset_index(inplace=True)
                     # Ensure date column has the correct type
                     if 'Date' in hist.columns:
-                        hist['Date'] = pd.to_datetime(hist['Date'])  # Keep as datetime for Spark compatibility
+                        # Convert to datetime without timezone
+                        hist['Date'] = pd.to_datetime(hist['Date']).dt.tz_localize(None)
                     hist['ticker'] = ticker
                     all_data.append(hist)
                     
@@ -217,7 +218,22 @@ class DataIngestionAgent:
         try:
             logger.info(f"Starting Delta table ingestion for {table_name}")
             logger.debug("Converting to Spark DataFrame with schema validation...")
-            spark_df = self.spark.createDataFrame(data, schema=self.define_schema())
+            
+            # Create a Spark DataFrame with date columns properly handled
+            schema = self.define_schema()
+            data_dict = {
+                'ticker': data['ticker'],
+                'date': data['date'].dt.date,  # Convert to date
+                'open': data['open'],
+                'high': data['high'],
+                'low': data['low'],
+                'close': data['close'],
+                'adj_close': data['adj_close'],
+                'volume': data['volume'],
+                'ingestion_timestamp': data['ingestion_timestamp'].dt.date  # Convert to date
+            }
+            
+            spark_df = self.spark.createDataFrame(data_dict, schema=schema)
             
             # Set up the full table path
             full_table_name = f"{self.catalog}.{self.database}.{table_name}"
