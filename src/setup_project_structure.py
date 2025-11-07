@@ -21,7 +21,7 @@ def create_directory_with_placeholders(path: str, readme_content: str = None) ->
     # Create README.md with content
     if readme_content is None:
         readme_content = f"# {os.path.basename(path)}\n\nAdd documentation for this directory here."
-    
+
     with open(os.path.join(path, 'README.md'), 'w') as f:
         f.write(readme_content)
 
@@ -40,11 +40,12 @@ def setup_project_structure():
     }
     # Get the project root directory (where this script is located)
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    
+
     # Create each directory with its placeholders
     for dir_path, description in directories.items():
         full_path = os.path.join(project_root, dir_path)
-        readme_content = f"# {dir_path}\n\n{description}\n\n## Overview\n\nAdd detailed documentation here."
+        readme_content = (f"# {dir_path}\\n\\n{description}\\n\\n## Overview\\n\\n"
+                          f"Add detailed documentation here.")
         create_directory_with_placeholders(full_path, readme_content)
         print(f"Created directory structure for: {dir_path}")
 

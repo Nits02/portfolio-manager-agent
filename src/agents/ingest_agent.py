@@ -28,6 +28,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 class DataIngestionError(Exception):
     """Custom exception for data ingestion errors."""
     pass
@@ -81,7 +82,7 @@ class DataIngestionAgent:
         except Exception as exc:
             logger.critical("Failed to initialize DataIngestionAgent", exc_info=True)
             raise DataIngestionError(f"Agent initialization failed: {str(exc)}")
-        
+
     def _initialize_spark(self) -> SparkSession:
         """Initialize Spark session with Delta Lake support."""
         try:
@@ -98,7 +99,7 @@ class DataIngestionAgent:
                 )
                 .getOrCreate()
             )
-            
+
             logger.info("SparkSession initialized successfully")
             return spark
         except Exception as e:
@@ -112,14 +113,16 @@ class DataIngestionAgent:
             logger.info("\n=== Ingestion Summary ===")
             logger.info(f"Duration: {duration.total_seconds():.2f} seconds")
             logger.info(f"Total rows ingested: {self.ingestion_stats['total_rows']}")
-            logger.info(f"Successful tickers: {', '.join(self.ingestion_stats['successful_tickers'])}")
+            successful_tickers = ', '.join(self.ingestion_stats['successful_tickers'])
+            logger.info(f"Successful tickers: {successful_tickers}")
             if self.ingestion_stats['failed_tickers']:
                 failed = ', '.join(self.ingestion_stats['failed_tickers'])
                 logger.warning(f"Failed tickers: {failed}")
             logger.info("=====================")
 
-    def download_price_data(self, tickers: List[str], start_date: Optional[datetime] = None,
-                          end_date: Optional[datetime] = None) -> pd.DataFrame:
+    def download_price_data(self, tickers: List[str],
+                            start_date: Optional[datetime] = None,
+                            end_date: Optional[datetime] = None) -> pd.DataFrame:
         """
         Download OHLCV data for given tickers.
 
@@ -142,7 +145,7 @@ class DataIngestionAgent:
 
             logger.info(f"Starting data download for {len(tickers)} tickers")
             logger.info(f"Date range: {start_date.date()} to {end_date.date()}")
-            
+
             # Download data for each ticker
             all_data = []
             for ticker in tickers:
@@ -150,10 +153,10 @@ class DataIngestionAgent:
                     logger.info(f"Downloading data for {ticker}...")
                     yf_ticker = yf.Ticker(ticker)
                     hist = yf_ticker.history(start=start_date, end=end_date)
-                    
+
                     if hist.empty:
                         raise DataIngestionError(f"No data available for {ticker}")
-                    
+
                     # Handle timezone and date conversion properly
                     if hasattr(hist.index, 'tz_localize'):
                         hist.index = hist.index.tz_localize(None)  # Remove timezone if present
@@ -164,10 +167,10 @@ class DataIngestionAgent:
                         hist['Date'] = pd.to_datetime(hist['Date']).dt.tz_localize(None)
                     hist['ticker'] = ticker
                     all_data.append(hist)
-                    
+
                     logger.info(f"Successfully downloaded {len(hist)} rows for {ticker}")
                     self.ingestion_stats["successful_tickers"].append(ticker)
-                    
+
                 except Exception as exc:
                     logger.error(f"Failed to download data for {ticker}: {str(exc)}", exc_info=True)
                     self.ingestion_stats["failed_tickers"].append(ticker)
@@ -179,7 +182,7 @@ class DataIngestionAgent:
             # Combine all data and add ingestion timestamp
             combined_data = pd.concat(all_data, ignore_index=True)
             combined_data['ingestion_timestamp'] = pd.to_datetime(datetime.now().date())
-            
+
             # Rename columns to match schema
             combined_data.rename(columns={
                 'Date': 'date',
@@ -193,7 +196,7 @@ class DataIngestionAgent:
 
             self.ingestion_stats["total_rows"] = len(combined_data)
             logger.info(f"Successfully combined data: {len(combined_data)} total rows")
-            
+
             return combined_data
 
         except Exception as exc:
@@ -218,7 +221,7 @@ class DataIngestionAgent:
         try:
             logger.info(f"Starting Delta table ingestion for {table_name}")
             logger.debug("Converting to Spark DataFrame with schema validation...")
-            
+
             # Create a Spark DataFrame with date columns properly handled
             schema = self.define_schema()
             data_dict = {
@@ -232,20 +235,20 @@ class DataIngestionAgent:
                 'volume': data['volume'],
                 'ingestion_timestamp': data['ingestion_timestamp'].dt.date  # Convert to date
             }
-            
+
             spark_df = self.spark.createDataFrame(data_dict, schema=schema)
-            
+
             # Set up the full table path
             full_table_name = f"{self.catalog}.{self.database}.{table_name}"
             logger.info(f"Writing to table: {full_table_name}")
-            
+
             # Write to Delta table
             (spark_df.write
              .format("delta")
              .mode("append")
              .option("mergeSchema", "true")
              .saveAsTable(full_table_name))
-            
+
             row_count = spark_df.count()
             logger.info(f"Successfully wrote {row_count} rows to {full_table_name}")
 
@@ -254,13 +257,15 @@ class DataIngestionAgent:
             raise DataIngestionError(f"Delta table write failed: {str(e)}")
         finally:
             duration = datetime.now() - start_time
-            logger.info(f"Delta table ingestion completed in {duration.total_seconds():.2f} seconds")
+            msg = f"Delta table ingestion completed in {duration.total_seconds():.2f} seconds"
+            logger.info(msg)
+
 
 def main():
     """Main function to run the data ingestion workflow."""
     try:
         logger.info("Starting data ingestion workflow")
-        
+
         # Initialize agent
         agent = DataIngestionAgent()
 
@@ -276,7 +281,6 @@ def main():
     except Exception as exc:
         logger.critical(f"Data ingestion workflow failed: {str(exc)}", exc_info=True)
         sys.exit(1)
-
 
 
 if __name__ == "__main__":

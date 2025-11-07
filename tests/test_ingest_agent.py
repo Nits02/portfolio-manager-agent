@@ -45,6 +45,7 @@ def ingest_agent(mock_spark_session):
         agent.spark = mock_spark_session
         return agent
 
+
 class TestDataIngestionAgent:
     """Test suite for DataIngestionAgent class."""
 
@@ -70,7 +71,7 @@ class TestDataIngestionAgent:
             "volume": LongType(),
             "ingestion_timestamp": DateType()
         }
-        
+
         for field in schema.fields:
             assert field.name in expected_fields
             assert isinstance(field.dataType, type(expected_fields[field.name]))
@@ -90,7 +91,7 @@ class TestDataIngestionAgent:
         # Verify calls and results
         mock_yf_ticker.assert_called_once_with('AAPL')
         mock_ticker_instance.history.assert_called_once()
-        
+
         assert isinstance(result, pd.DataFrame)
         assert 'ticker' in result.columns
         assert all(result['ticker'] == 'AAPL')
@@ -138,7 +139,9 @@ class TestDataIngestionAgent:
 
         # Create mock for spark DataFrame operations
         mock_spark_df = Mock()
-        mock_spark_df.write.format.return_value.mode.return_value.option.return_value.saveAsTable = Mock()
+        mock_write_chain = (mock_spark_df.write.format.return_value.mode.return_value.
+                            option.return_value)
+        mock_write_chain.saveAsTable = Mock()
         ingest_agent.spark.createDataFrame.return_value = mock_spark_df
 
         # Test the method
@@ -163,10 +166,10 @@ class TestDataIngestionAgent:
     def test_failed_download_handling(self, mock_yf_ticker, ingest_agent):
         """Test handling of failed downloads."""
         mock_yf_ticker.return_value.history.side_effect = Exception("API Error")
-        
+
         with pytest.raises(DataIngestionError):
             ingest_agent.download_price_data(['AAPL'])
-        
+
         assert len(ingest_agent.ingestion_stats['failed_tickers']) == 1
         assert 'AAPL' in ingest_agent.ingestion_stats['failed_tickers']
 
@@ -174,14 +177,14 @@ class TestDataIngestionAgent:
         """Test date range validation in download_price_data."""
         start_date = datetime.now() - timedelta(days=5)
         end_date = datetime.now()
-        
+
         with patch('yfinance.Ticker') as mock_yf_ticker:
             mock_ticker_instance = Mock()
             mock_ticker_instance.history.return_value = sample_price_data
             mock_yf_ticker.return_value = mock_ticker_instance
-            
+
             ingest_agent.download_price_data(['AAPL'], start_date=start_date, end_date=end_date)
-            
+
             # Verify date range was passed correctly
             mock_ticker_instance.history.assert_called_once()
             call_kwargs = mock_ticker_instance.history.call_args[1]
