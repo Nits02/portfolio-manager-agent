@@ -160,7 +160,7 @@ class DataIngestionAgent:
                     hist.reset_index(inplace=True)
                     # Ensure date column has the correct type
                     if 'Date' in hist.columns:
-                        hist['Date'] = pd.to_datetime(hist['Date']).dt.date
+                        hist['Date'] = pd.to_datetime(hist['Date'])  # Keep as datetime for Spark compatibility
                     hist['ticker'] = ticker
                     all_data.append(hist)
                     
@@ -177,7 +177,7 @@ class DataIngestionAgent:
 
             # Combine all data and add ingestion timestamp
             combined_data = pd.concat(all_data, ignore_index=True)
-            combined_data['ingestion_timestamp'] = datetime.now().date()
+            combined_data['ingestion_timestamp'] = pd.to_datetime(datetime.now().date())
             
             # Rename columns to match schema
             combined_data.rename(columns={
