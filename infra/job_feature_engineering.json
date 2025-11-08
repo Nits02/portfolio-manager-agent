@@ -9,7 +9,7 @@
     {
       "task_key": "feature_engineering",
       "notebook_task": {
-        "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/02_feature_engineering",
+        "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/03_feature_engineering",
         "source": "WORKSPACE",
         "base_parameters": {
           "tickers": "${TICKERS}",

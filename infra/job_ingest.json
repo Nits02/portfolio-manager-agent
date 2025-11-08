@@ -9,7 +9,7 @@
     {
       "task_key": "ingest_data",
       "notebook_task": {
-        "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/00_ingest_financial_data",
+        "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/01_ingest_financial_data",
         "source": "WORKSPACE"
       },
       "existing_cluster_policy": {

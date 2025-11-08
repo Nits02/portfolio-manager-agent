@@ -4,7 +4,7 @@
     {
       "task_key": "validate_features",
       "notebook_task": {
-        "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/02_validate_features",
+        "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/04_validate_features",
         "source": "WORKSPACE",
         "base_parameters": {
           "tickers": "${TICKERS}",
