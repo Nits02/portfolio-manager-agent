@@ -1,0 +1,174 @@
+{
+  "name": "Portfolio Management Pipeline Orchestrator",
+  "description": "Master pipeline that orchestrates the complete portfolio management workflow in the correct sequence",
+  "schedule": {
+    "quartz_cron_expression": "0 0 18 * * ?",
+    "timezone_id": "America/New_York",
+    "pause_status": "UNPAUSED"
+  },
+  "tasks": [
+    {
+      "task_key": "setup_workspace",
+      "notebook_task": {
+        "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/00_setup_workspace",
+        "source": "WORKSPACE",
+        "base_parameters": {
+          "catalog": "portfolio_catalog",
+          "schema": "portfolio_schema",
+          "environment": "${ENVIRONMENT}"
+        }
+      },
+      "existing_cluster_policy": {
+        "policy_id": "${CLUSTER_POLICY_ID}"
+      },
+      "timeout_seconds": 1800,
+      "retry_on_timeout": true,
+      "max_retries": 2,
+      "min_retry_interval_millis": 300000
+    },
+    {
+      "task_key": "ingest_data",
+      "depends_on": [
+        {
+          "task_key": "setup_workspace",
+          "outcome": "SUCCESS"
+        }
+      ],
+      "notebook_task": {
+        "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/01_ingest_financial_data",
+        "source": "WORKSPACE",
+        "base_parameters": {
+          "tickers": "${TICKERS}",
+          "catalog": "portfolio_catalog",
+          "schema": "portfolio_schema",
+          "environment": "${ENVIRONMENT}"
+        }
+      },
+      "existing_cluster_policy": {
+        "policy_id": "${CLUSTER_POLICY_ID}"
+      },
+      "timeout_seconds": 3600,
+      "retry_on_timeout": true,
+      "max_retries": 3,
+      "min_retry_interval_millis": 300000,
+      "libraries": [
+        {
+          "pypi": {
+            "package": "yfinance>=0.2.0"
+          }
+        }
+      ]
+    },
+    {
+      "task_key": "validate_ingestion",
+      "depends_on": [
+        {
+          "task_key": "ingest_data",
+          "outcome": "SUCCESS"
+        }
+      ],
+      "notebook_task": {
+        "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/02_validate_ingest",
+        "source": "WORKSPACE",
+        "base_parameters": {
+          "tickers": "${TICKERS}",
+          "catalog": "portfolio_catalog",
+          "schema": "portfolio_schema",
+          "environment": "${ENVIRONMENT}"
+        }
+      },
+      "existing_cluster_policy": {
+        "policy_id": "${CLUSTER_POLICY_ID}"
+      },
+      "timeout_seconds": 1800,
+      "retry_on_timeout": true,
+      "max_retries": 2,
+      "min_retry_interval_millis": 300000
+    },
+    {
+      "task_key": "feature_engineering",
+      "depends_on": [
+        {
+          "task_key": "validate_ingestion",
+          "outcome": "SUCCESS"
+        }
+      ],
+      "notebook_task": {
+        "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/03_feature_engineering",
+        "source": "WORKSPACE",
+        "base_parameters": {
+          "tickers": "${TICKERS}",
+          "catalog": "portfolio_catalog",
+          "schema": "portfolio_schema",
+          "environment": "${ENVIRONMENT}"
+        }
+      },
+      "existing_cluster_policy": {
+        "policy_id": "${CLUSTER_POLICY_ID}"
+      },
+      "timeout_seconds": 3600,
+      "retry_on_timeout": true,
+      "max_retries": 2,
+      "min_retry_interval_millis": 300000,
+      "libraries": [
+        {
+          "pypi": {
+            "package": "pandas>=1.5.0"
+          }
+        }
+      ]
+    },
+    {
+      "task_key": "validate_features",
+      "depends_on": [
+        {
+          "task_key": "feature_engineering",
+          "outcome": "SUCCESS"
+        }
+      ],
+      "notebook_task": {
+        "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/04_validate_features",
+        "source": "WORKSPACE",
+        "base_parameters": {
+          "tickers": "${TICKERS}",
+          "catalog": "portfolio_catalog",
+          "schema": "portfolio_schema",
+          "environment": "${ENVIRONMENT}"
+        }
+      },
+      "existing_cluster_policy": {
+        "policy_id": "${CLUSTER_POLICY_ID}"
+      },
+      "timeout_seconds": 1800,
+      "retry_on_timeout": true,
+      "max_retries": 2,
+      "min_retry_interval_millis": 300000
+    }
+  ],
+  "format": "MULTI_TASK",
+  "max_concurrent_runs": 1,
+  "tags": {
+    "purpose": "daily_pipeline",
+    "environment": "${ENVIRONMENT}",
+    "pipeline": "portfolio_manager",
+    "type": "orchestrator"
+  },
+  "email_notifications": {
+    "on_start": [],
+    "on_success": ["${NOTIFICATION_EMAIL}"],
+    "on_failure": ["${NOTIFICATION_EMAIL}"],
+    "no_alert_for_skipped_runs": true
+  },
+  "webhook_notifications": {
+    "on_start": [],
+    "on_success": [],
+    "on_failure": []
+  },
+  "notification_settings": {
+    "no_alert_for_skipped_runs": true,
+    "no_alert_for_canceled_runs": false
+  },
+  "run_as": {
+    "user_name": "niteshchand_sharma@epam.com"
+  }
+}

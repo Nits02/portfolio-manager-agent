@@ -1,30 +1,33 @@
 {
-  "name": "Feature Engineering Pipeline",
+  "name": "Feature Validation Pipeline",
   "schedule": {
-    "quartz_cron_expression": "0 0 20 * * SUN",
+    "quartz_cron_expression": "0 30 20 * * SUN",
     "timezone_id": "America/New_York",
     "pause_status": "UNPAUSED"
   },
   "tasks": [
     {
-      "task_key": "feature_engineering",
+      "task_key": "validate_features",
       "notebook_task": {
-        "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/03_feature_engineering",
+        "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/04_feature_validation",
         "source": "WORKSPACE",
         "base_parameters": {
-          "tickers": "${TICKERS}",
           "catalog": "portfolio_catalog",
           "schema": "portfolio_schema",
-          "environment": "${ENVIRONMENT}"
+          "table_name": "features",
+          "environment": "${ENVIRONMENT}",
+          "data_quality_checks": "true",
+          "completeness_threshold": "0.95",
+          "validity_threshold": "0.98"
         }
       },
       "existing_cluster_policy": {
         "policy_id": "${CLUSTER_POLICY_ID}"
       },
-      "timeout_seconds": 3600,
+      "timeout_seconds": 1800,
       "retry_on_timeout": true,
       "max_retries": 2,
-      "min_retry_interval_millis": 300000,
+      "min_retry_interval_millis": 180000,
       "libraries": [
         {
           "pypi": {
@@ -35,6 +38,11 @@
           "pypi": {
             "package": "numpy>=1.24.0"
           }
+        },
+        {
+          "pypi": {
+            "package": "great-expectations>=0.17.0"
+          }
         }
       ]
     }
@@ -44,14 +52,14 @@
   "depends_on": [
     {
       "outcome": "SUCCESS",
-      "job_id": "${DATA_VALIDATION_JOB_ID}"
+      "job_id": "${FEATURE_ENGINEERING_JOB_ID}"
     }
   ],
   "tags": {
-    "purpose": "feature_engineering",
+    "purpose": "feature_validation",
     "environment": "${ENVIRONMENT}",
     "pipeline": "portfolio_manager",
-    "sequence": "03"
+    "sequence": "04"
   },
   "email_notifications": {
     "on_start": [],

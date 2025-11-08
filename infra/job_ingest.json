@@ -1,16 +1,22 @@
 {
-  "name": "Data Ingestion Agent",
+  "name": "Data Ingestion Pipeline",
   "schedule": {
-    "quartz_cron_expression": "0 0 6 * * ?",
-    "timezone_id": "UTC",
+    "quartz_cron_expression": "0 0 18 * * ?",
+    "timezone_id": "America/New_York",
     "pause_status": "UNPAUSED"
   },
   "tasks": [
     {
-      "task_key": "ingest_data",
+      "task_key": "ingest_financial_data",
       "notebook_task": {
         "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/01_ingest_financial_data",
-        "source": "WORKSPACE"
+        "source": "WORKSPACE",
+        "base_parameters": {
+          "tickers": "${TICKERS}",
+          "catalog": "portfolio_catalog",
+          "schema": "portfolio_schema",
+          "environment": "${ENVIRONMENT}"
+        }
       },
       "existing_cluster_policy": {
         "policy_id": "${CLUSTER_POLICY_ID}"
@@ -18,17 +24,45 @@
       "timeout_seconds": 3600,
       "retry_on_timeout": true,
       "max_retries": 3,
-      "min_retry_interval_millis": 300000
+      "min_retry_interval_millis": 300000,
+      "libraries": [
+        {
+          "pypi": {
+            "package": "yfinance>=0.2.0"
+          }
+        },
+        {
+          "pypi": {
+            "package": "pandas>=1.5.0"
+          }
+        }
+      ]
     }
   ],
   "format": "MULTI_TASK",
   "max_concurrent_runs": 1,
   "tags": {
     "purpose": "data_ingestion",
-    "environment": "production"
+    "environment": "${ENVIRONMENT}",
+    "pipeline": "portfolio_manager",
+    "sequence": "01"
   },
   "email_notifications": {
-    "on_failure": [],
+    "on_start": [],
+    "on_success": [],
+    "on_failure": ["${NOTIFICATION_EMAIL}"],
     "no_alert_for_skipped_runs": true
+  },
+  "webhook_notifications": {
+    "on_start": [],
+    "on_success": [],
+    "on_failure": []
+  },
+  "notification_settings": {
+    "no_alert_for_skipped_runs": true,
+    "no_alert_for_canceled_runs": false
+  },
+  "run_as": {
+    "user_name": "niteshchand_sharma@epam.com"
   }
 }
