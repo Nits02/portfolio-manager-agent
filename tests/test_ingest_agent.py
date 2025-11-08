@@ -133,18 +133,18 @@ class TestDataIngestionAgent:
         test_df['ticker'] = 'AAPL'
         # Set ingestion_timestamp as datetime (not date) so .dt accessor works
         test_df['ingestion_timestamp'] = pd.to_datetime(datetime.now().date())
-        
+
         # Rename columns to match the expected format (lowercase, matching yfinance processing)
         test_df.rename(columns={
             'index': 'date',
             'Open': 'open',
-            'High': 'high', 
+            'High': 'high',
             'Low': 'low',
             'Close': 'close',
             'Adj Close': 'adj_close',
             'Volume': 'volume'
         }, inplace=True)
-        
+
         # Ensure date column is also datetime for .dt accessor
         test_df['date'] = pd.to_datetime(test_df['date'])
 
