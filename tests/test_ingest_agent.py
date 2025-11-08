@@ -111,9 +111,9 @@ class TestDataIngestionAgent:
 
         for ticker in tickers:
             mock_instance = Mock()
+            # Create a copy of sample data with proper date index reset
             ticker_data = sample_price_data.copy()
-            ticker_data.reset_index(inplace=True)
-            ticker_data['ticker'] = ticker  # Add ticker column
+            # Don't add ticker column here - download_price_data will add it
             mock_instance.history.return_value = ticker_data
             ticker_instances[ticker] = mock_instance
 
@@ -128,14 +128,25 @@ class TestDataIngestionAgent:
 
     def test_ingest_to_delta(self, ingest_agent, sample_price_data):
         """Test Delta table ingestion."""
-        # Prepare test data
+        # Prepare test data with correct column names (matching what ingest_to_delta expects)
         test_df = sample_price_data.reset_index()
         test_df['ticker'] = 'AAPL'
-        test_df['ingestion_timestamp'] = datetime.now().date()
+        # Set ingestion_timestamp as datetime (not date) so .dt accessor works
+        test_df['ingestion_timestamp'] = pd.to_datetime(datetime.now().date())
+        
+        # Rename columns to match the expected format (lowercase, matching yfinance processing)
         test_df.rename(columns={
             'index': 'date',
-            'Adj Close': 'adj_close'
+            'Open': 'open',
+            'High': 'high', 
+            'Low': 'low',
+            'Close': 'close',
+            'Adj Close': 'adj_close',
+            'Volume': 'volume'
         }, inplace=True)
+        
+        # Ensure date column is also datetime for .dt accessor
+        test_df['date'] = pd.to_datetime(test_df['date'])
 
         # Create mock for spark DataFrame operations
         mock_spark_df = Mock()
