@@ -387,11 +387,11 @@ class PredictiveModelAgent:
                     logger.info("Using RandomForest classifier (memory-optimized)")
                 else:
                     # GBT Classifier with memory-optimized parameters for Databricks
+                    # Note: GBTClassifier doesn't support probabilityCol parameter
                     classifier = GBTClassifier(
                         featuresCol=self.scaled_features_col,
                         labelCol=self.label_col,
                         predictionCol="prediction",
-                        probabilityCol="probability",
                         seed=self.random_seed,
                         maxIter=10,  # Reduced from 20 to limit model size
                         maxDepth=4,  # Reduced from 5 to limit model size
@@ -510,6 +510,8 @@ class PredictiveModelAgent:
             logger.info("Evaluating model performance")
 
             # Binary classification evaluator (ROC-AUC)
+            # For GBT models, this will use rawPredictionCol automatically
+            # For RandomForest models, this will use probabilityCol automatically
             binary_evaluator = BinaryClassificationEvaluator(
                 labelCol=self.label_col,
                 metricName="areaUnderROC"
