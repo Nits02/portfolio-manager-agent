@@ -23,7 +23,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import VectorAssembler, StandardScaler
-from pyspark.ml.classification import GBTClassifier
+from pyspark.ml.classification import GBTClassifier, RandomForestClassifier
 from pyspark.ml.evaluation import BinaryClassificationEvaluator, MulticlassClassificationEvaluator
 from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
 
@@ -335,13 +335,14 @@ class PredictiveModelAgent:
             logger.error(error_msg, exc_info=True)
             raise PredictiveModelError(error_msg)
 
-    def train(self, tickers: List[str], hyperparameter_tuning: bool = False) -> Dict[str, Any]:
+    def train(self, tickers: List[str], hyperparameter_tuning: bool = False, model_type: str = "gbt") -> Dict[str, Any]:
         """
-        Train a Gradient Boosted Tree Classifier for multiple tickers.
+        Train a binary classifier for price direction prediction.
 
         Args:
             tickers: List of ticker symbols to train on
             hyperparameter_tuning: Whether to perform hyperparameter tuning
+            model_type: Type of model to train ("gbt" or "rf")
 
         Returns:
             Dictionary with training results and model info
@@ -350,7 +351,8 @@ class PredictiveModelAgent:
             logger.info(f"Starting model training for tickers: {', '.join(tickers)}")
 
             # Start MLflow run
-            with mlflow.start_run(run_name=f"GBT_{'_'.join(tickers)}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"):
+            model_name = "RF" if model_type == "rf" else "GBT"
+            with mlflow.start_run(run_name=f"{model_name}_{'_'.join(tickers)}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"):
 
                 # Log parameters
                 mlflow.log_params({
@@ -358,7 +360,8 @@ class PredictiveModelAgent:
                     "feature_columns": ",".join(self.feature_cols),
                     "train_test_split": self.train_test_split,
                     "random_seed": self.random_seed,
-                    "hyperparameter_tuning": hyperparameter_tuning
+                    "hyperparameter_tuning": hyperparameter_tuning,
+                    "model_type": model_type
                 })
 
                 # Read and prepare data
@@ -367,27 +370,54 @@ class PredictiveModelAgent:
                 prepared_df, feature_model = self.prepare_features(labeled_df)
                 train_df, test_df = self.split_data(prepared_df)
 
-                # Configure GBT Classifier
-                gbt = GBTClassifier(
-                    featuresCol=self.scaled_features_col,
-                    labelCol=self.label_col,
-                    predictionCol="prediction",
-                    probabilityCol="probability",
-                    seed=self.random_seed,
-                    maxIter=20,
-                    maxDepth=5,
-                    stepSize=0.1
-                )
+                # Configure classifier based on model type
+                if model_type == "rf":
+                    # RandomForest - more memory efficient for large datasets
+                    classifier = RandomForestClassifier(
+                        featuresCol=self.scaled_features_col,
+                        labelCol=self.label_col,
+                        predictionCol="prediction",
+                        probabilityCol="probability",
+                        seed=self.random_seed,
+                        numTrees=20,  # Limited number of trees for memory efficiency
+                        maxDepth=5,   # Reasonable depth for good performance
+                        subsamplingRate=0.8,
+                        maxMemoryInMB=256
+                    )
+                    logger.info("Using RandomForest classifier (memory-optimized)")
+                else:
+                    # GBT Classifier with memory-optimized parameters for Databricks
+                    classifier = GBTClassifier(
+                        featuresCol=self.scaled_features_col,
+                        labelCol=self.label_col,
+                        predictionCol="prediction",
+                        probabilityCol="probability",
+                        seed=self.random_seed,
+                        maxIter=10,  # Reduced from 20 to limit model size
+                        maxDepth=4,  # Reduced from 5 to limit model size
+                        stepSize=0.1,
+                        subsamplingRate=0.8,  # Add subsampling to reduce model complexity
+                        maxMemoryInMB=256  # Explicit memory limit
+                    )
+                    logger.info("Using GBT classifier (memory-optimized)")
 
                 if hyperparameter_tuning:
                     logger.info("Performing hyperparameter tuning")
 
-                    # Parameter grid for tuning
-                    param_grid = ParamGridBuilder() \
-                        .addGrid(gbt.maxIter, [10, 20, 30]) \
-                        .addGrid(gbt.maxDepth, [3, 5, 7]) \
-                        .addGrid(gbt.stepSize, [0.05, 0.1, 0.2]) \
-                        .build()
+                    # Parameter grid for tuning - optimized for Databricks memory limits
+                    if model_type == "rf":
+                        param_grid = ParamGridBuilder() \
+                            .addGrid(classifier.numTrees, [10, 20, 30]) \
+                            .addGrid(classifier.maxDepth, [3, 5, 7]) \
+                            .addGrid(classifier.subsamplingRate, [0.7, 0.8, 0.9]) \
+                            .build()
+                    else:
+                        param_grid = ParamGridBuilder() \
+                            .addGrid(classifier.maxIter, [5, 10, 15]) \
+                            .addGrid(classifier.maxDepth, [2, 3, 4]) \
+                            .addGrid(classifier.stepSize, [0.1, 0.15, 0.2]) \
+                            .addGrid(classifier.subsamplingRate, [0.7, 0.8, 0.9]) \
+                            .build()
 
                     # Cross-validator
                     evaluator = BinaryClassificationEvaluator(
@@ -396,7 +426,7 @@ class PredictiveModelAgent:
                     )
 
                     cv = CrossValidator(
-                        estimator=gbt,
+                        estimator=classifier,
                         estimatorParamMaps=param_grid,
                         evaluator=evaluator,
                         numFolds=3,
@@ -408,17 +438,25 @@ class PredictiveModelAgent:
                     model = cv_model.bestModel
 
                     # Log best parameters
-                    best_params = {
-                        "best_maxIter": model.getMaxIter(),
-                        "best_maxDepth": model.getMaxDepth(),
-                        "best_stepSize": model.getStepSize()
-                    }
+                    if model_type == "rf":
+                        best_params = {
+                            "best_numTrees": model.getNumTrees(),
+                            "best_maxDepth": model.getMaxDepth(),
+                            "best_subsamplingRate": model.getSubsamplingRate()
+                        }
+                    else:
+                        best_params = {
+                            "best_maxIter": model.getMaxIter(),
+                            "best_maxDepth": model.getMaxDepth(),
+                            "best_stepSize": model.getStepSize(),
+                            "best_subsamplingRate": model.getSubsamplingRate()
+                        }
                     mlflow.log_params(best_params)
                     logger.info(f"Best parameters: {best_params}")
 
                 else:
                     # Train with default parameters
-                    model = gbt.fit(train_df)
+                    model = classifier.fit(train_df)
 
                 # Make predictions
                 train_predictions = model.transform(train_df)
