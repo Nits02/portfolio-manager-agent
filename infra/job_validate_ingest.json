@@ -12,10 +12,12 @@
         "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/02_validate_ingest",
         "source": "WORKSPACE",
         "base_parameters": {
-          "tickers": "${TICKERS}",
-          "catalog": "portfolio_catalog",
-          "schema": "portfolio_schema",
-          "environment": "${ENVIRONMENT}"
+          "catalog": "finance_catalog",
+          "schema": "bronze",
+          "environment": "${ENVIRONMENT}",
+          "data_quality_checks": "true",
+          "completeness_threshold": "0.95",
+          "validity_threshold": "0.98"
         }
       },
       "existing_cluster_policy": {

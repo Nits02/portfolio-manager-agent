@@ -13,8 +13,8 @@
         "source": "WORKSPACE",
         "base_parameters": {
           "tickers": "${TICKERS}",
-          "catalog": "portfolio_catalog",
-          "schema": "portfolio_schema",
+          "catalog": "finance_catalog",
+          "schema": "silver",
           "environment": "${ENVIRONMENT}",
           "hyperparameter_tuning": "true",
           "model_name": "portfolio_price_predictor_${ENVIRONMENT}"

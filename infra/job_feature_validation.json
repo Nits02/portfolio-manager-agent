@@ -12,8 +12,8 @@
         "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/04_feature_validation",
         "source": "WORKSPACE",
         "base_parameters": {
-          "catalog": "portfolio_catalog",
-          "schema": "portfolio_schema",
+          "catalog": "finance_catalog",
+          "schema": "silver",
           "table_name": "features",
           "environment": "${ENVIRONMENT}",
           "data_quality_checks": "true",
