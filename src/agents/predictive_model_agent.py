@@ -60,6 +60,9 @@ class PredictiveModelAgent:
         self.spark = None
         self.mlflow_client = None
 
+        # UC volume path for MLflow temporary storage (required for Databricks)
+        self.uc_volume_path = f"/Volumes/{catalog}/mlflow_temp/tmp"
+
         # Model configuration
         self.feature_cols = [
             'daily_return', 'moving_avg_7', 'moving_avg_30',
@@ -76,8 +79,10 @@ class PredictiveModelAgent:
         try:
             self.spark = self._initialize_spark()
             self.mlflow_client = self._initialize_mlflow()
+            self._setup_uc_volume()
             logger.info(
                 f"Initialized PredictiveModelAgent with catalog={catalog}, schema={schema}")
+            logger.info(f"UC volume path for MLflow: {self.uc_volume_path}")
         except Exception as exc:
             logger.critical("Failed to initialize PredictiveModelAgent", exc_info=True)
             raise PredictiveModelError(f"Agent initialization failed: {str(exc)}")
@@ -132,6 +137,48 @@ class PredictiveModelAgent:
         except Exception as e:
             logger.warning(f"MLflow initialization failed: {str(e)}")
             return None
+
+    def _setup_uc_volume(self):
+        """Setup Unity Catalog volume for MLflow temporary storage."""
+        try:
+            # Create volume if it doesn't exist
+            volume_sql = f"""
+            CREATE VOLUME IF NOT EXISTS {self.catalog}.mlflow_temp
+            COMMENT 'Temporary storage for MLflow models and artifacts'
+            """
+            
+            # First create schema if needed
+            schema_sql = f"CREATE SCHEMA IF NOT EXISTS {self.catalog}.mlflow_temp"
+            
+            try:
+                self.spark.sql(schema_sql)
+                logger.info(f"Schema {self.catalog}.mlflow_temp ready")
+            except Exception as schema_error:
+                logger.warning(f"Schema creation handled by system: {str(schema_error)}")
+            
+            try:
+                self.spark.sql(volume_sql)
+                logger.info(f"UC volume {self.catalog}.mlflow_temp created/verified")
+            except Exception as volume_error:
+                logger.warning(f"Volume creation handled by system: {str(volume_error)}")
+            
+            # Set MLflow DFS temp directory environment variable
+            import os
+            os.environ['MLFLOW_DFS_TMP'] = self.uc_volume_path
+            logger.info(f"Set MLFLOW_DFS_TMP to {self.uc_volume_path}")
+            
+        except Exception as e:
+            logger.error(f"UC volume setup failed: {str(e)}")
+            # Try alternative approach with default catalog
+            try:
+                alt_path = f"/Volumes/main/default/tmp"
+                import os
+                os.environ['MLFLOW_DFS_TMP'] = alt_path
+                logger.warning(f"Using alternative volume path: {alt_path}")
+                self.uc_volume_path = alt_path
+            except Exception as alt_error:
+                logger.error(f"Alternative volume setup failed: {str(alt_error)}")
+                raise PredictiveModelError(f"UC volume setup failed: {str(e)}")
 
     def read_feature_data(self, tickers: List[str]) -> DataFrame:
         """
@@ -468,15 +515,20 @@ class PredictiveModelAgent:
                 # Log metrics
                 mlflow.log_metrics(metrics)
 
-                # Log model
+                # Log model with UC volume path
                 mlflow.spark.log_model(
                     model,
                     "model",
-                    registered_model_name=f"portfolio_gbt_{'_'.join(tickers)}"
+                    registered_model_name=f"portfolio_gbt_{'_'.join(tickers)}",
+                    dfs_tmpdir=self.uc_volume_path
                 )
 
-                # Log feature model
-                mlflow.spark.log_model(feature_model, "feature_pipeline")
+                # Log feature model with UC volume path
+                mlflow.spark.log_model(
+                    feature_model, 
+                    "feature_pipeline",
+                    dfs_tmpdir=self.uc_volume_path
+                )
 
                 training_results = {
                     "model": model,
