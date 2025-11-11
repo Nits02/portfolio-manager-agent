@@ -379,12 +379,12 @@ class PredictiveModelAgent:
                         predictionCol="prediction",
                         probabilityCol="probability",
                         seed=self.random_seed,
-                        numTrees=20,  # Limited number of trees for memory efficiency
-                        maxDepth=5,   # Reasonable depth for good performance
-                        subsamplingRate=0.8,
-                        maxMemoryInMB=256
+                        numTrees=15,  # Reduced from 20 for extra memory efficiency
+                        maxDepth=4,   # Reduced from 5 for extra memory efficiency
+                        subsamplingRate=0.7,  # Reduced from 0.8 for extra memory efficiency
+                        maxMemoryInMB=200  # Reduced from 256 for extra memory efficiency
                     )
-                    logger.info("Using RandomForest classifier (memory-optimized)")
+                    logger.info("Using RandomForest classifier (ultra-memory-optimized)")
                 else:
                     # GBT Classifier with memory-optimized parameters for Databricks
                     # Note: GBTClassifier doesn't support probabilityCol parameter
@@ -407,16 +407,16 @@ class PredictiveModelAgent:
                     # Parameter grid for tuning - optimized for Databricks memory limits
                     if model_type == "rf":
                         param_grid = ParamGridBuilder() \
-                            .addGrid(classifier.numTrees, [10, 20, 30]) \
-                            .addGrid(classifier.maxDepth, [3, 5, 7]) \
-                            .addGrid(classifier.subsamplingRate, [0.7, 0.8, 0.9]) \
+                            .addGrid(classifier.numTrees, [8, 12, 15]) \
+                            .addGrid(classifier.maxDepth, [3, 4, 5]) \
+                            .addGrid(classifier.subsamplingRate, [0.6, 0.7, 0.8]) \
                             .build()
                     else:
                         param_grid = ParamGridBuilder() \
-                            .addGrid(classifier.maxIter, [5, 10, 15]) \
+                            .addGrid(classifier.maxIter, [5, 8, 10]) \
                             .addGrid(classifier.maxDepth, [2, 3, 4]) \
                             .addGrid(classifier.stepSize, [0.1, 0.15, 0.2]) \
-                            .addGrid(classifier.subsamplingRate, [0.7, 0.8, 0.9]) \
+                            .addGrid(classifier.subsamplingRate, [0.6, 0.7, 0.8]) \
                             .build()
 
                     # Cross-validator
