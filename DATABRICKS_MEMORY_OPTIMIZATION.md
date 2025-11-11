@@ -212,7 +212,7 @@ lr = LogisticRegression(
 - ✅ Performance maintained (minimal accuracy loss)
 
 🚀 **Next Steps:**
-1. Run the updated `06_predictive_modeling.ipynb`
+1. Run the updated `05_predictive_modeling.ipynb`
 2. Model should train successfully without memory errors
 3. Achieve good performance with smaller, faster models
 

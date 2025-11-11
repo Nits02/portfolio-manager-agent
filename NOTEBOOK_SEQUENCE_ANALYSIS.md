@@ -11,8 +11,8 @@ notebooks/
 ├── 03_feature_engineering.ipynb        ✅ Phase 2: Feature Engineering
 ├── 04_validate_features.ipynb          ✅ Phase 2: Feature Validation
 ├── 05-predictive-model-agent-demo.ipynb ✅ Phase 3: Demo (Optional)
-├── 06_predictive_modeling.ipynb        ✅ Phase 3: Model Training
-└── 07_inference_app.py                 ✅ Phase 3: Inference App (Python)
+├── 05_predictive_modeling.ipynb        ✅ Phase 3: Model Training
+└── 06_inference_app.py                 ✅ Phase 3: Inference App (Python)
 ```
 
 ## ✅ **SEQUENCE STATUS: COMPLETE AND PROPERLY ORCHESTRATED**
@@ -37,7 +37,7 @@ notebooks/
 
 #### **Phase 3: Model Training & Deployment (06 → 07)**
 ```mermaid
-04_validate_features → 06_predictive_modeling → 07_inference_app
+04_validate_features → 05_predictive_modeling → 06_inference_app
 ```
 - ✅ **Sequential dependencies**: Model training uses validated features
 - ✅ **MLflow Integration**: Models registered in Unity Catalog
@@ -52,7 +52,7 @@ notebooks/
 - **Usage**: Manual execution for learning/demonstration
 
 ### **2. Notebook 07 is Python File (Not .ipynb):**
-- **File**: `07_inference_app.py` (Streamlit application)
+- **File**: `06_inference_app.py` (Streamlit application)
 - **Purpose**: Interactive prediction interface 
 - **Deployment**: Databricks Apps or standalone execution
 - **Status**: ✅ Correct - Streamlit apps are typically .py files
@@ -85,12 +85,12 @@ Status: ✅ Properly isolated ML training
 
 2. **Monthly (1st Mon, 22:00 EST)**:
    ```
-   06_predictive_modeling (triggered after successful feature validation)
+   05_predictive_modeling (triggered after successful feature validation)
    ```
 
 3. **Continuous**:
    ```
-   07_inference_app.py (runs as Databricks App)
+   06_inference_app.py (runs as Databricks App)
    ```
 
 ### **Manual/Demo Execution:**

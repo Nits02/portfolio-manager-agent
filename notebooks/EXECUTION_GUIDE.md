@@ -20,8 +20,10 @@ This document outlines the proper sequence for running the portfolio management 
 ### Phase 3: Model Training and Deployment
 ```
 05-predictive-model-agent-demo.ipynb  → Demo of modeling capabilities (optional)
-06_predictive_modeling.ipynb          → Production model training
-07_inference_app.py                   → Streamlit inference application
+```
+05_predictive_modeling.ipynb          → Production model training
+06_inference_app.py                   → Streamlit inference application
+```
 ```
 
 ## 🎯 Detailed Execution Guide
@@ -115,7 +117,7 @@ This document outlines the proper sequence for running the portfolio management 
 
 ---
 
-### 7. Production Model Training (06_predictive_modeling.ipynb)
+### 5. Production Model Training (05_predictive_modeling.ipynb)
 **Purpose:** Train production-ready ML models
 **Prerequisites:** Validated features available
 **Outputs:**
@@ -130,7 +132,7 @@ This document outlines the proper sequence for running the portfolio management 
 
 ---
 
-### 8. Inference Application (07_inference_app.py)
+### 6. Inference Application (06_inference_app.py)
 **Purpose:** Interactive prediction interface
 **Prerequisites:** Trained model registered in Unity Catalog
 **Outputs:**
@@ -156,12 +158,12 @@ This document outlines the proper sequence for running the portfolio management 
    - 03_feature_engineering.ipynb
    - 04_validate_features.ipynb
    - 05-predictive-model-agent-demo.ipynb
-   - 06_predictive_modeling.ipynb
+   - 05_predictive_modeling.ipynb
    ```
 
 2. **Deploy Streamlit App:**
    ```bash
-   # Upload 07_inference_app.py to Databricks Apps or run as notebook
+   # Upload 06_inference_app.py to Databricks Apps or run as notebook
    # Databricks Apps location: /Workspace/portfolio-manager-agent/apps/
    ```
 
@@ -201,11 +203,11 @@ spark.sql.execution.arrow.pyspark.enabled true
 2. Run `04_validate_features.ipynb` (feature quality)
 
 **Monthly Operations:**
-1. Run `06_predictive_modeling.ipynb` (retrain models)
-2. Update `07_inference_app.py` with new model versions
+1. Run `05_predictive_modeling.ipynb` (retrain models)
+2. Update `06_inference_app.py` with new model versions
 
 **Continuous:**
-- `07_inference_app.py` runs continuously for predictions
+- `06_inference_app.py` runs continuously for predictions
 
 ### Step 4: Automation Setup
 
@@ -233,7 +235,7 @@ spark.sql.execution.arrow.pyspark.enabled true
    ```yaml
    Job Name: "portfolio-monthly-training"
    Tasks:
-     - 06_predictive_modeling.ipynb
+     - 05_predictive_modeling.ipynb
    Schedule: First Monday of each month at 10 PM EST
    ```
 

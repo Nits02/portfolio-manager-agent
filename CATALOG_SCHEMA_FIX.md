@@ -2,7 +2,7 @@
 
 ## ✅ Issue Resolved
 
-**Problem**: The predictive modeling notebook (`06_predictive_modeling.ipynb`) was looking for feature tables that didn't exist because of a catalog/schema naming mismatch between the feature engineering and predictive modeling notebooks.
+**Problem**: The predictive modeling notebook (`05_predictive_modeling.ipynb`) was looking for feature tables that didn't exist because of a catalog/schema naming mismatch between the feature engineering and predictive modeling notebooks.
 
 **Error Message**:
 ```
@@ -21,7 +21,7 @@
   - Schema: `"finance"`
   - Created tables: `main.finance.features_AAPL`, `main.finance.features_MSFT`
 
-- **Predictive Modeling Notebook** (`06_predictive_modeling.ipynb`):
+- **Predictive Modeling Notebook** (`05_predictive_modeling.ipynb`):
   - Catalog: `"portfolio_catalog"`
   - Schema: `"portfolio_schema"`
   - Expected tables: `portfolio_catalog.portfolio_schema.features_AAPL`, `portfolio_catalog.portfolio_schema.features_MSFT`
@@ -104,7 +104,7 @@ After running the updated feature engineering notebook:
 
 1. **Run Feature Engineering**: Execute the updated `03_feature_engineering.ipynb` notebook
 2. **Verify Tables**: Confirm that the feature tables are created in the correct location
-3. **Run Predictive Modeling**: Execute `06_predictive_modeling.ipynb` to train the model
+3. **Run Predictive Modeling**: Execute `05_predictive_modeling.ipynb` to train the model
 4. **Monitor Pipeline**: Ensure the job pipeline uses consistent naming
 
 ## 📊 Verification Query

@@ -192,7 +192,7 @@ binary_evaluator = BinaryClassificationEvaluator(
 - ✅ Production-ready configuration
 
 🚀 **Next Steps:**
-1. Run the updated `06_predictive_modeling.ipynb`
+1. Run the updated `05_predictive_modeling.ipynb`
 2. Both RandomForest and GBT models should train successfully
 3. Full evaluation metrics available for both model types
 

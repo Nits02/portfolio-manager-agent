@@ -9,7 +9,7 @@
     {
       "task_key": "train_predictive_model",
       "notebook_task": {
-        "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/06_predictive_modeling",
+        "notebook_path": "/Users/niteshchand_sharma@epam.com/portfolio-manager-agent/portfolio-manager-agent/notebooks/05_predictive_modeling",
         "source": "WORKSPACE",
         "base_parameters": {
           "tickers": "${TICKERS}",

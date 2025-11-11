@@ -48,7 +48,7 @@ feature_agent = FeatureEngineeringAgent(catalog="finance_catalog", schema="silve
 - ✅ Schema search includes `finance_catalog.bronze` for raw data
 - ✅ Sample data created in `finance_catalog.silver` if needed
 
-#### **06_predictive_modeling.ipynb**
+#### **05_predictive_modeling.ipynb**
 ```python
 # Before
 CATALOG_NAME = "portfolio_catalog"
@@ -102,9 +102,9 @@ SCHEMA_NAME = "silver"
     ↓ (bronze → silver: features)
 04_validate_features 
     ↓ (validate silver features)
-06_predictive_modeling 
+05_predictive_modeling 
     ↓ (silver: ML training)
-07_inference_app 
+06_inference_app 
     ↓ (silver: real-time predictions)
 ```
 
@@ -132,7 +132,7 @@ CREATE SCHEMA IF NOT EXISTS finance_catalog.silver;
 1. **00_setup_workspace.ipynb** - Creates Unity Catalog structure
 2. **01_ingest_financial_data.ipynb** - Populates `bronze` schema
 3. **03_feature_engineering.ipynb** - Creates tables in `silver` schema
-4. **06_predictive_modeling.ipynb** - Trains models using `silver` tables
+4. **05_predictive_modeling.ipynb** - Trains models using `silver` tables
 
 ### **3. Expected Table Creation**
 After running feature engineering:
@@ -198,7 +198,7 @@ DESCRIBE finance_catalog.silver.features_AAPL;
 
 🔧 **Next Steps:**
 1. Run `03_feature_engineering.ipynb` - should now work without errors
-2. Run `06_predictive_modeling.ipynb` - should find the expected tables
+2. Run `05_predictive_modeling.ipynb` - should find the expected tables
 3. Execute the complete pipeline end-to-end
 
 The Unity Catalog architecture is now fully consistent and aligned across all notebooks, job configurations, and the data pipeline! 🎉

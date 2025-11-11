@@ -98,10 +98,10 @@ except MODEL_SIZE_OVERFLOW:
 00_setup_workspace → 01_ingest_financial_data → 02_validate_ingest → 03_feature_engineering → 04_validate_features
 
 # Production model training (memory-optimized)
-06_predictive_modeling  # ✅ Now ultra-memory efficient
+05_predictive_modeling  # ✅ Now ultra-memory efficient
 
 # Inference application
-07_inference_app.py     # ✅ Ready for deployment
+06_inference_app.py     # ✅ Ready for deployment
 ```
 
 ### **Notebook 06 Configuration Options:**
@@ -154,4 +154,4 @@ TARGET_TICKERS = ['AAPL', 'MSFT'] # Multiple tickers
 - ✅ **Clean notebook sequence** (removed unnecessary demo)
 - ✅ **Robust error handling** (clear guidance on failures)
 
-**🚀 Ready to run `06_predictive_modeling.ipynb` with confidence!** 🎉
+**🚀 Ready to run `05_predictive_modeling.ipynb` with confidence!** 🎉
