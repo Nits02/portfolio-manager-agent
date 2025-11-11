@@ -9,7 +9,7 @@
 
 ### Job Execution Sequence (Correct Order)
 ```
-00_setup_workspace → 01_ingest_financial_data → 02_validate_ingest → 03_feature_engineering → 04_validate_features → 05_predictive_modeling → 06_inference_app
+00_setup_workspace → 01_ingest_financial_data → 02_validate_ingest → 03_feature_engineering → 04_validate_features → 05_predictive_modeling → streamlit_app/app
 ```
 
 ### 1. Daily Pipeline Orchestrator (`job_daily_pipeline.json`)
@@ -53,7 +53,7 @@
 - **Dependencies**: Depends on FEATURE_VALIDATION_JOB_ID
 - **Status**: ✅ Configured for monthly execution with hyperparameter tuning
 
-### 6. Inference Application (`06_inference_app.py`)
+### 6. Inference Application (`streamlit_app/app.py`)
 - **Purpose**: Interactive prediction interface
 - **Deployment**: Streamlit app on Databricks
 - **Dependencies**: Requires trained models from job #6

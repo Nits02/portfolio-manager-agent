@@ -26,14 +26,14 @@ After removing the unnecessary demo notebook (05), the sequence has been properl
 03_feature_engineering.ipynb            → Feature creation
 04_validate_features.ipynb              → Feature validation
 05_predictive_modeling.ipynb ✅ NEW     → Model training
-06_inference_app.py ✅ NEW              → Inference application
+streamlit_app/app.py ✅ NEW              → Inference application
 ```
 
 ## 🔧 **FILES RENAMED AND UPDATED**
 
 ### **File Renames:**
 - `06_predictive_modeling.ipynb` → `05_predictive_modeling.ipynb`
-- `07_inference_app.py` → `06_inference_app.py`
+- `07_inference_app.py` → `streamlit_app/app.py`
 
 ### **Metadata Updated:**
 - Updated notebook internal metadata (`notebookName`)
@@ -60,7 +60,7 @@ graph LR
     C --> D[03_feature_engineering]
     D --> E[04_validate_features]
     E --> F[05_predictive_modeling]
-    F --> G[06_inference_app]
+    F --> G[streamlit_app/app]
 ```
 
 ### **Sequential Dependencies:**
@@ -114,7 +114,7 @@ graph LR
 
 ### **Inference:**
 ```
-06_inference_app (continuous)
+streamlit_app/app (continuous)
 ```
 
 ## ✅ **STATUS: FULLY CORRECTED**
@@ -129,7 +129,7 @@ graph LR
 ### **🚀 Updated Execution Commands:**
 ```bash
 # Complete pipeline (corrected sequence)
-00_setup_workspace.ipynb → 01_ingest_financial_data.ipynb → 02_validate_ingest.ipynb → 03_feature_engineering.ipynb → 04_validate_features.ipynb → 05_predictive_modeling.ipynb → 06_inference_app.py
+00_setup_workspace.ipynb → 01_ingest_financial_data.ipynb → 02_validate_ingest.ipynb → 03_feature_engineering.ipynb → 04_validate_features.ipynb → 05_predictive_modeling.ipynb → streamlit_app/app.py
 ```
 
 The notebook sequence is now perfectly aligned with logical progression and maintains clean sequential numbering! 🎯

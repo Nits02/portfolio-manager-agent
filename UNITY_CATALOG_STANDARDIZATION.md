@@ -104,7 +104,7 @@ SCHEMA_NAME = "silver"
     ↓ (validate silver features)
 05_predictive_modeling 
     ↓ (silver: ML training)
-06_inference_app 
+streamlit_app/app 
     ↓ (silver: real-time predictions)
 ```
 

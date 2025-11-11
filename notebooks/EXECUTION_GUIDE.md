@@ -19,10 +19,14 @@ This document outlines the proper sequence for running the portfolio management 
 
 ### Phase 3: Model Training and Deployment
 ```
+05_predictive_modeling.ipynb          → Production model training
+streamlit_app/app.py                  → Streamlit inference application
+```
+```
 05-predictive-model-agent-demo.ipynb  → Demo of modeling capabilities (optional)
 ```
 05_predictive_modeling.ipynb          → Production model training
-06_inference_app.py                   → Streamlit inference application
+streamlit_app/app.py                   → Streamlit inference application
 ```
 ```
 
@@ -132,7 +136,7 @@ This document outlines the proper sequence for running the portfolio management 
 
 ---
 
-### 6. Inference Application (06_inference_app.py)
+### 6. Inference Application (streamlit_app/app.py)
 **Purpose:** Interactive prediction interface
 **Prerequisites:** Trained model registered in Unity Catalog
 **Outputs:**
@@ -163,7 +167,7 @@ This document outlines the proper sequence for running the portfolio management 
 
 2. **Deploy Streamlit App:**
    ```bash
-   # Upload 06_inference_app.py to Databricks Apps or run as notebook
+   # Upload streamlit_app/app.py to Databricks Apps or run as notebook
    # Databricks Apps location: /Workspace/portfolio-manager-agent/apps/
    ```
 
@@ -204,10 +208,10 @@ spark.sql.execution.arrow.pyspark.enabled true
 
 **Monthly Operations:**
 1. Run `05_predictive_modeling.ipynb` (retrain models)
-2. Update `06_inference_app.py` with new model versions
+2. Update `streamlit_app/app.py` with new model versions
 
 **Continuous:**
-- `06_inference_app.py` runs continuously for predictions
+- `streamlit_app/app.py` runs continuously for predictions
 
 ### Step 4: Automation Setup
 

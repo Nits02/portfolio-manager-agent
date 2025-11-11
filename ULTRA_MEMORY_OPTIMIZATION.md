@@ -101,7 +101,7 @@ except MODEL_SIZE_OVERFLOW:
 05_predictive_modeling  # ✅ Now ultra-memory efficient
 
 # Inference application
-06_inference_app.py     # ✅ Ready for deployment
+streamlit_app/app.py     # ✅ Ready for deployment
 ```
 
 ### **Notebook 06 Configuration Options:**
