@@ -22,9 +22,10 @@ on:
         required: false
         default: false
         type: boolean
-  schedule:
-    # Run daily at 6:30 AM UTC (after market close)
-    - cron: '30 6 * * *'
+  # DISABLED: Automatic daily schedule - run manually via workflow_dispatch only
+  # schedule:
+  #   # Run daily at 6:30 AM UTC (after market close)
+  #   - cron: '30 6 * * *'
 
 env:
   DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
