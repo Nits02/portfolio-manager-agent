@@ -29,9 +29,10 @@ on:
         - dev
         - staging
         - prod
-  schedule:
-    # Run daily at 7 AM UTC (after market close and data ingestion)
-    - cron: '0 7 * * *'
+  # DISABLED: Automatic daily schedule - run manually via workflow_dispatch only
+  # schedule:
+  #   # Run daily at 7 AM UTC (after market close and data ingestion)
+  #   - cron: '0 7 * * *'
   workflow_run:
     workflows: ["Data Ingestion Pipeline"]
     types:
